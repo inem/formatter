@@ -74,8 +74,8 @@ class Sputnik
 
     yield(self)
     
-    word = "" if end_of_word?
-    line = "" if end_of_line?
+    @word = "" if end_of_word?
+    @line = "" if end_of_line?
     @previous_character = @character
   end
     
