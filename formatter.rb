@@ -66,14 +66,33 @@ class Sputnik
     @current_character = chr
 
     analyze!
-    @previous_character = @current_character
-    # puts @line
+
+    if @should_add_counter
+      # binding.pry
+      @counter = @counter + 1
+      @should_add_counter = false
+    end
+
+    yield(self)
+    
+    obsolete!
   end
+    
+  def expectation
+    if end_of_line?
+      "#{@cfg.spacer*@counter}#{@line}#{@previous_character};"
+      obsolete!
+    else
+      # "_"
+    end
+  end
+
+  private
 
   def analyze!
     if start_of_block?
-      # @should_add_counter = true
-      @counter = @counter + 1
+      @should_add_counter = true
+      # @counter = @counter + 1
     elsif end_of_block?
       @counter = @counter - 1
     end
@@ -88,24 +107,23 @@ class Sputnik
   end
 
   def obsolete!
-    if end_of_line?
       @line = ""
-    end
-
-    if end_of_word?
-      @word = ""
-    end
-  end
     
-  def expectation
-    if end_of_line?
-      "#{@cfg.spacer*@counter}#{@line}#{@previous_character}\n"
-    else
-      # "_"
-    end
+
+    # if end_of_word?
+    #   @word = ""
+    # end
+
+  
   end
 
-  private
+  def end_of_block?
+    @current_character == @cfg.block_end
+  end
+
+  def start_of_block?
+    @current_character == @cfg.block_start
+  end
 
   def word_break_array
     [@cfg.block_start, @cfg.block_end, @cfg.new_line_symbol, " "]
@@ -118,14 +136,6 @@ class Sputnik
   def end_of_line?
     @current_character == @cfg.new_line_symbol
   end
-
-  def end_of_block?
-    @current_character == @cfg.block_end
-  end
-
-  def start_of_block?
-    @current_character == @cfg.block_start
-  end
 end
 
 
@@ -136,11 +146,10 @@ sputnik = Sputnik.new(config)
 formatter = Formatter.new(reader, sputnik)
 
 formatter.proceed do |chr|
-  sputnik.addc(chr)
+  sputnik.addc(chr) do |s|
+    Pogrom.puts(s.expectation)
+  end
 
-  Pogrom.puts(sputnik.expectation)
-
-  sputnik.obsolete!
 end
 
 # input = $stdin.read
