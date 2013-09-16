@@ -1,4 +1,5 @@
 #!/usr/bin/ruby
+require 'pry'
  
 class Reader
   attr_accessor :path, :file
@@ -18,22 +19,21 @@ class Reader
 end
 
 class Cfg
-  attr_accessor :spacer, :block_start, :block_end, :new_line_after
-  def initialize(spacer, block_start, block_end, new_line_after)
+  attr_accessor :spacer, :block_start, :block_end, :new_line_symbol
+  def initialize(spacer, block_start, block_end, new_line_symbol)
     @spacer = spacer
     @block_start = block_start
     @block_end = block_end
-    @new_line_after = new_line_after
-    
+    @new_line_symbol = new_line_symbol
   end
 end
 
 class Formatter
-  attr_accessor :reader, :config
+  attr_accessor :reader, :sputnik
 
-  def initialize(reader)
-    @config = Cfg.new("  ", "{", "}", ";")
+  def initialize(reader, sputnik)
     @reader = reader
+    @sputnik = sputnik
   end
 
   def proceed
@@ -43,12 +43,104 @@ class Formatter
   end
 end
 
+class Pogrom
+  def self.puts(str)
+    print str
+  end
+end
+
+class Sputnik
+  attr_accessor :word, :line, :cfg, :current_character, :previous_character
+  
+  def initialize(config)
+    @word = ""
+    @line = ""
+    @cfg = config
+    @current_character = nil
+    @previous_character = nil
+    @counter = 0
+    @should_add_counter = false
+  end
+
+  def addc(chr)
+    @current_character = chr
+
+    analyze!
+    @previous_character = @current_character
+    # puts @line
+  end
+
+  def analyze!
+    if start_of_block?
+      # @should_add_counter = true
+      @counter = @counter + 1
+    elsif end_of_block?
+      @counter = @counter - 1
+    end
+
+    unless end_of_line?
+      @line << @current_character
+    end
+
+    unless end_of_word?
+      @word << @current_character 
+    end
+  end
+
+  def obsolete!
+    if end_of_line?
+      @line = ""
+    end
+
+    if end_of_word?
+      @word = ""
+    end
+  end
+    
+  def expectation
+    if end_of_line?
+      "#{@cfg.spacer*@counter}#{@line}#{@previous_character}\n"
+    else
+      # "_"
+    end
+  end
+
+  private
+
+  def word_break_array
+    [@cfg.block_start, @cfg.block_end, @cfg.new_line_symbol, " "]
+  end
+
+  def end_of_word?
+    word_break_array.include? @current_character
+  end
+
+  def end_of_line?
+    @current_character == @cfg.new_line_symbol
+  end
+
+  def end_of_block?
+    @current_character == @cfg.block_end
+  end
+
+  def start_of_block?
+    @current_character == @cfg.block_start
+  end
+end
+
 
 reader = Reader.new('./code_samples/oneliner.code')
-formatter = Formatter.new(reader)
+config = Cfg.new("  ", "{", "}", ";")
+sputnik = Sputnik.new(config)
+
+formatter = Formatter.new(reader, sputnik)
 
 formatter.proceed do |chr|
-  print chr
+  sputnik.addc(chr)
+
+  Pogrom.puts(sputnik.expectation)
+
+  sputnik.obsolete!
 end
 
 # input = $stdin.read
