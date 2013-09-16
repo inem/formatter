@@ -19,11 +19,11 @@ class Reader
 end
 
 class Cfg
-  attr_accessor :spacer, :block_start, :block_end, :new_line_symbol
-  def initialize(spacer, block_start, block_end, new_line_symbol)
+  attr_accessor :spacer, :start, :finish, :new_line_symbol
+  def initialize(spacer, start, finish, new_line_symbol)
     @spacer = spacer
-    @block_start = block_start
-    @block_end = block_end
+    @start = start
+    @finish = finish
     @new_line_symbol = new_line_symbol
   end
 end
@@ -43,47 +43,49 @@ class Formatter
   end
 end
 
-class Pogrom
-  def self.puts(str)
-    print str
-  end
-end
+# class Pogrom
+#   def self.puts(str)
+#     print str
+#   end
+# end
 
 class Sputnik
-  attr_accessor :word, :line, :cfg, :current_character, :previous_character
+  attr_accessor :word, :line, :cfg, :character, :previous_character
   
   def initialize(config)
     @word = ""
     @line = ""
     @cfg = config
-    @current_character = nil
+    @character = nil
     @previous_character = nil
     @counter = 0
     @should_add_counter = false
   end
 
   def addc(chr)
-    @current_character = chr
+    @character = chr
 
     analyze!
 
     if @should_add_counter
-      # binding.pry
       @counter = @counter + 1
       @should_add_counter = false
     end
 
     yield(self)
     
-    obsolete!
+    word = "" if end_of_word?
+    line = "" if end_of_line?
+    @previous_character = @character
   end
     
   def expectation
     if end_of_line?
-      "#{@cfg.spacer*@counter}#{@line}#{@previous_character};"
-      obsolete!
+      "\n#{@cfg.spacer*@counter}"
+    elsif end_of_block?
+      "\n#{@cfg.spacer*(@counter)}"
     else
-      # "_"
+      ""
     end
   end
 
@@ -98,43 +100,32 @@ class Sputnik
     end
 
     unless end_of_line?
-      @line << @current_character
+      @line << @character
     end
 
     unless end_of_word?
-      @word << @current_character 
+      @word << @character 
     end
   end
 
-  def obsolete!
-      @line = ""
-    
-
-    # if end_of_word?
-    #   @word = ""
-    # end
-
-  
-  end
-
   def end_of_block?
-    @current_character == @cfg.block_end
+    @character == @cfg.finish
   end
 
   def start_of_block?
-    @current_character == @cfg.block_start
+    @character == @cfg.start
   end
 
   def word_break_array
-    [@cfg.block_start, @cfg.block_end, @cfg.new_line_symbol, " "]
+    [@cfg.start, @cfg.finish, @cfg.new_line_symbol, " "]
   end
 
   def end_of_word?
-    word_break_array.include? @current_character
+    word_break_array.include? @character
   end
 
   def end_of_line?
-    @current_character == @cfg.new_line_symbol
+    @character == @cfg.new_line_symbol
   end
 end
 
@@ -147,45 +138,8 @@ formatter = Formatter.new(reader, sputnik)
 
 formatter.proceed do |chr|
   sputnik.addc(chr) do |s|
-    Pogrom.puts(s.expectation)
+    print s.character
+    print s.expectation
   end
 
 end
-
-# input = $stdin.read
-
-# counter = 0
-# space_sympol = "  "
-# line = ""
-
-# end_of_line = false
-# should_add_counter = false
-# previous_character = nil
-
-# input.split("").each do |character|
-#   if end_of_line
-#     puts "#{space_sympol*counter}#{line}#{previous_character}"
-#     counter = counter + 1 if should_add_counter
-#     should_add_counter = false
-#     line = ""
-#   end
-
-#   end_of_line = false  
-
-#   if character == "{"
-#     should_add_counter = true
-#     # counter = counter + 1
-#   elsif character == "}"
-#     counter = counter - 1
-#   elsif character == ";"
-#     end_of_line = true
-#   end
-
-#   unless end_of_line
-#     line << character
-#   end 
-  
-#   # puts output
-#   previous_character = character
-# end
-# puts line
