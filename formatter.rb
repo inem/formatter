@@ -37,19 +37,18 @@ class Formatter
   end
 
   def proceed
-
+    while chr = reader.getc
+      yield(chr)
+    end
   end
 end
 
 
 reader = Reader.new('./code_samples/oneliner.code')
-formatter = Formatter.new
+formatter = Formatter.new(reader)
 
-while true do
-  character = reader.getc
-  exit unless character
-
-  print character
+formatter.proceed do |chr|
+  print chr
 end
 
 # input = $stdin.read
